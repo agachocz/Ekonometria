@@ -10,12 +10,22 @@ data_list <- lapply(data_files, function(file){
 # Some data are noted daily, some annually
 
 daily_data <- join_all(data_list[1:3], by = c("Entity", "Code", "Day"), type = 'full')
-annual_data <- join_all(data_list[4:11], by = c("Entity", "Code", "Year"), type = 'full')
+annual_data <- join_all(data_list[c(4:5, 7:14)], by = c("Entity", "Code", "Year"), type = 'full')
+
+covid_data <- data_list[[6]] %>% mutate(Year = str_sub(date, 1, 4)) %>%
+  select(Entity = location, Year, Deaths = total_deaths) %>%
+  filter(Year == "2020" | Year == "2021") %>%
+  mutate(Entity_Year = paste(Entity, Year)) %>%
+  group_by(Entity_Year) %>%
+  filter(!is.na(Deaths)) %>%
+  arrange(Deaths) %>% do(tail(., 1))
 
 annual_data <- annual_data %>% select(-Code) %>% filter(Year <= 2021)
 
-colnames(annual_data) <- c('Entity', 'Year', 'Gini', 'Median_age', 'PISA_science', 'Trust_others',
-                           'Health_public_exp', 'Tertiary_edu', 'Trust_gov', 'Health_exp')
+colnames(annual_data) <- c('Entity', 'Year', 'Gini', 'Median_age', 'PISA_science', 
+                           'Total_pop', 'Pop_fertility', 'Trust_others',
+                           'Health_public_exp', 'Tertiary_edu', 'Trust_gov', 'Health_exp',
+                           'Deaths1', 'Deaths2', 'Deaths3')
 
 
 # find the most recent available data for each country
@@ -42,6 +52,14 @@ Trust_gov <- annual_data %>% select(Entity, Year, Trust_gov) %>% group_by(Entity
 
 Health_exp <- annual_data %>% select(Entity, Year, Health_exp) %>% group_by(Entity, Year) %>%
   filter(!is.na(Health_exp)) %>% arrange(Year) %>% group_by(Entity) %>% do(tail(., 1)) %>% select(-Year)
+
+Total_pop <- annual_data %>% select(Entity, Year, Total_pop) %>% group_by(Entity, Year) %>%
+  filter(!is.na(Total_pop)) %>% arrange(Year) %>% group_by(Entity) %>% do(tail(., 1)) %>% select(-Year)
+
+Deaths <- annual_data %>% select(Entity, Year, Deaths1, Deaths2, Deaths3) %>% 
+  mutate(Deaths = Deaths1 + Deaths2 + Deaths3) %>% select(Entity, Year, Deaths) %>%
+  filter(Year > 2015) %>% filter(!is.na(Deaths)) %>% group_by(Entity) %>%
+  dplyr::summarise(Hist_Deaths = mean(Deaths)) %>% select(Entity, Hist_Deaths)
 
 
 # merge annual data
