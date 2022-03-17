@@ -44,11 +44,14 @@ Health_exp <- annual_data %>% select(Entity, Year, Health_exp) %>% group_by(Enti
   filter(!is.na(Health_exp)) %>% arrange(Year) %>% group_by(Entity) %>% do(tail(., 1)) %>% select(-Year)
 
 
-# merge data
+# merge annual data
 
 annual_data_merge <- join_all(list(Gini, Health_exp, Health_public_exp, Median_age, PISA_science, Tertiary_edu,
                                    Trust_gov, Trust_others), by = c("Entity")) %>%
   filter_all(all_vars(!is.na(.)))
+
+
+# daily data
 
 daily_data <- daily_data %>% select(-Code) %>% rename(Excess_mortality = cum_excess_proj_all_ages) 
 plot(daily_data$Excess_mortality)
@@ -63,3 +66,5 @@ daily_tranformed <- daily_data %>%
     Stringency_sd = sd(stringency_index, na.rm = T),
     Excess_mortality = sum(Excess_mortality, na.rm = T)
   )
+
+data_all <- full_join(annual_data_merge, daily_tranformed, by = c('Entity'))
